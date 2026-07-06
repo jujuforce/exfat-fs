@@ -297,7 +297,15 @@ impl StreamExtensionEntry {
 
 impl ClusterAllocation for StreamExtensionEntry {
     fn valid(&self) -> bool {
-        !(self.first_cluster == 0 && self.data_len != 0 || self.first_cluster < 2)
+        // An empty file/directory (DataLength == 0) legitimately has
+        // FirstCluster == 0 with no allocation; otherwise FirstCluster must
+        // reference a real cluster (>= 2).
+        let cluster_ok = if self.data_len == 0 {
+            self.first_cluster == 0
+        } else {
+            self.first_cluster >= 2
+        };
+        cluster_ok
             && self.general_secondary_flags.allocation_possible()
             && self.name_length > 0
             && self.valid_data_length <= self.data_len
